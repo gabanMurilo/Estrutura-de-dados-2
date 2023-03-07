@@ -1,56 +1,74 @@
 #include <stdio.h>
-#include <string.h>
+#include <stdlib.h>
 
-void quicksort(char *string, int left, int right);
-int compara(char a, char b);
+
+int contador = 0;
+
+void merge(int arr[], int l, int m, int r) {
+    int n1 = m - l + 1;
+    int n2 = r - m;
+ 
+    int L[n1], R[n2];
+ 
+    for (int i = 0; i < n1; i++)
+        L[i] = arr[l + i];
+    for (int j = 0; j < n2; j++)
+        R[j] = arr[m + 1 + j];
+ 
+    int i = 0, j = 0, k = l;
+    while (i < n1 && j < n2) {
+        if (L[i] >= R[j]) {
+            arr[k] = L[i];
+            i++;
+        }
+        else {
+            arr[k] = R[j];
+            j++;
+        }
+        k++;
+        contador++; //incrementa o contador de comparações
+    }
+ 
+    while (i < n1) {
+        arr[k] = L[i];
+        i++;
+        k++;
+    }
+ 
+    while (j < n2) {
+        arr[k] = R[j];
+        j++;
+        k++;
+    }
+}
+
+void mergeSort(int arr[], int l, int r) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+        mergeSort(arr, l, m);
+        mergeSort(arr, m + 1, r);
+ 
+        merge(arr, l, m, r);
+    }
+}
 
 int main() {
-    char string[50];
+    int n;
+    printf("Digite o tamanho do vetor: ");
+    scanf("%d", &n);
 
-    printf("Digite uma string: ");
-    scanf("%s", string);
+    int arr[n];
+    printf("Digite os elementos do vetor:\n");
+    for (int i = 0; i < n; i++)
+        scanf("%d", &arr[i]);
 
-    quicksort(string, 0, strlen(string) - 1);
+    mergeSort(arr, 0, n-1);
 
-    printf("A string ordenada em ordem decrescente: %s\n", string);
+    printf("Vetor ordenado:\n");
+    for (int i = 0; i < n; i++)
+        printf("%d ", arr[i]);
+
+    printf("\nNumero de comparacoes: %d\n", contador);
 
     return 0;
-}
-
-void quicksort(char *string, int left, int right) {
-    if (left < right) {
-        int i = left, j = right;
-        char pivot = string[(left + right) / 2];
-
-        while (i <= j) {
-            while (compara(string[i], pivot) > 0) {
-                i++;
-            }
-
-            while (compara(string[j], pivot) < 0) {
-                j--;
-            }
-
-            if (i <= j) {
-                char temp = string[i];
-                string[i] = string[j];
-                string[j] = temp;
-                i++;
-                j--;
-            }
-        }
-
-        quicksort(string, left, j);
-        quicksort(string, i, right);
-    }
-}
-
-int compara(char a, char b) {
-    if (a < b) {
-        return 1;
-    } else if (a > b) {
-        return -1;
-    } else {
-        return 0;
-    }
 }
