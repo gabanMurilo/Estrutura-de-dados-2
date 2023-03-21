@@ -1,163 +1,167 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MINIMO 2
-#define MAXIMO 4
+#define MAX_KEYS 4
 
-typedef struct no
+struct b_node
 {
-    int chaves[MAXIMO];
-    struct no *filhos[MAXIMO + 1];
-    int num_chaves;
-    int eh_folha;
-} No;
+    int num_keys;
+    int keys[MAX_KEYS];
+    struct b_node *children[MAX_KEYS + 1];
+    bool is_leaf;
+};
 
-typedef struct arvore
+struct b_node *create_node(bool is_leaf)
 {
-    No *raiz;
-    int grau_minimo;
-    int grau_maximo;
-} Arvore;
-
-No *criar_no()
-{
-    No *n = (No *)malloc(sizeof(No));
-    for (int i = 0; i <= MAXIMO; i++)
+    struct b_node *new_node = (struct b_node *)malloc(sizeof(struct b_node));
+    new_node->num_keys = 0;
+    new_node->is_leaf = is_leaf;
+    for (int i = 0; i < MAX_KEYS; i++)
     {
-        n->filhos[i] = NULL;
+        new_node->keys[i] = 0;
+        new_node->children[i] = NULL;
     }
-    n->num_chaves = 0;
-    n->eh_folha = 1;
-    return n;
+    new_node->children[MAX_KEYS] = NULL;
+    return new_node;
 }
 
-Arvore *criar_arvore(int grau_minimo, int grau_maximo)
+int binary_search(int *arr, int n, int key)
 {
-    Arvore *arv = (Arvore *)malloc(sizeof(Arvore));
-    arv->raiz = criar_no();
-    arv->grau_minimo = grau_minimo;
-    arv->grau_maximo = grau_maximo;
-    return arv;
-}
-
-int buscar_chave(No *n, int chave)
-{
-    int i = 0;
-    while (i < n->num_chaves && chave > n->chaves[i])
+    int low = 0, high = n - 1, mid;
+    while (low <= high)
     {
-        i++;
-    }
-    if (i < n->num_chaves && chave == n->chaves[i])
-    {
-        return 1;
-
-        if (n->eh_folha)
+        mid = (low + high) / 2;
+        if (key == arr[mid])
         {
-            return 0;
+            return mid;
+        }
+        else if (key < arr[mid])
+        {
+            high = mid - 1;
         }
         else
         {
-            return buscar_chave(n->filhos[i], chave);
+            low = mid + 1;
         }
     }
+    return low;
 }
 
-void dividir_no(Arvore *arv, No *pai, int pos_pai, No *filho)
+void split_child(struct b_node *parent, int i, struct b_node *child)
 {
-    No *novo_filho = criar_no();
-    novo_filho->eh_folha = filho->eh_folha;
-    novo_filho->num_chaves = arv->grau_minimo - 1;
-    for (int i = 0; i < arv->grau_minimo - 1; i++)
+    struct b_node *new_child = create_node(child->is_leaf);
+    for (int j = 0; j < MAX_KEYS / 2; j++)
     {
-        novo_filho->chaves[i] = filho->chaves[i + arv->grau_minimo];
+        new_child->keys[j] = child->keys[j + MAX_KEYS / 2];
     }
-    if (!filho->eh_folha)
+    if (!child->is_leaf)
     {
-        for (int i = 0; i < arv->grau_minimo; i++)
+        for (int j = 0; j <= MAX_KEYS / 2; j++)
         {
-            novo_filho->filhos[i] = filho->filhos[i + arv->grau_minimo];
+            new_child->children[j] = child->children[j + MAX_KEYS / 2];
         }
     }
-    filho->num_chaves = arv->grau_minimo - 1;
-    for (int i = pai->num_chaves; i >= pos_pai + 1; i--)
+    child->num_keys = MAX_KEYS / 2;
+    for (int j = parent->num_keys; j > i; j--)
     {
-        pai->filhos[i + 1] = pai->filhos[i];
+        parent->children[j + 1] = parent->children[j];
+        parent->keys[j] = parent->keys[j - 1];
     }
-    pai->filhos[pos_pai + 1] = novo_filho;
-    for (int i = pai->num_chaves - 1; i >= pos_pai; i--)
-    {
-        pai->chaves[i + 1] = pai->chaves[i];
-    }
-    pai->chaves[pos_pai] = filho->chaves[arv->grau_minimo - 1];
-    pai->num_chaves++;
+    parent->children[i + 1] = new_child;
+    parent->keys[i] = child->keys[MAX_KEYS / 2 - 1];
+    parent->num_keys++;
 }
 
-void inserir_nao_cheio(Arvore *arv, No *n, int chave)
+void insert_non_full(struct b_node *node, int key)
 {
-    int i = n->num_chaves - 1;
-    if (n->eh_folha)
+    int i = node->num_keys - 1;
+    if (node->is_leaf)
     {
-        while (i >= 0 && chave < n->chaves[i])
+        while (i >= 0 && node->keys[i] > key)
         {
-            n->chaves[i + 1] = n->chaves[i];
+            node->keys[i + 1] = node->keys[i];
             i--;
         }
-        n->chaves[i + 1] = chave;
-        n->num_chaves++;
+        node->keys[i + 1] = key;
+        node->num_keys++;
     }
     else
     {
-        while (i >= 0 && chave < n->chaves[i])
+        while (i >= 0 && node->keys[i] > key)
         {
             i--;
         }
-        i++;
-        if (n->filhos[i]->num_chaves == arv->grau_maximo - 1)
+        if (node->children[i + 1]->num_keys == MAX_KEYS)
         {
-            dividir_no(arv, n, i, n->filhos[i]);
-            if (chave > n->chaves[i])
+            split_child(node, i + 1, node->children[i + 1]);
+            if (node->keys[i + 1] < key)
             {
                 i++;
             }
         }
-        inserir_nao_cheio(arv, n->filhos[i], chave);
+        insert_non_full(node->children[i + 1], key);
     }
 }
 
-void inserir_chave(Arvore *arv, int chave)
+void insert(struct b_node **root, int key)
 {
-    No *raiz = arv->raiz;
-    if (raiz->num_chaves == arv->grau_maximo - 1)
+    if (*root == NULL)
     {
-        No *novo_raiz = criar_no();
-        arv->raiz = novo_raiz;
-        novo_raiz->eh_folha = 0;
-        novo_raiz->num_chaves = 0;
-        novo_raiz->filhos[0] = raiz;
-        dividir_no(arv, novo_raiz, 0, raiz);
-        inserir_nao_cheio(arv, novo_raiz, chave);
+        *root = create_node(true);
+        (*root)->keys[0] = key;
+        (*root)->num_keys++;
     }
     else
     {
-        inserir_nao_cheio(arv, raiz, chave);
+        if ((*root)->num_keys == MAX_KEYS)
+        {
+            struct b_node *new_root = create_node(false);
+            new_root->children[0] = *root;
+            split_child(new_root, 0, *root);
+            int i = binary_search(new_root->keys, new_root->num_keys, key);
+            insert_non_full(new_root->children[i + 1], key);
+            *root = new_root;
+        }
+        else
+        {
+            insert_non_full(*root, key);
+        }
     }
 }
+
+void traverse(struct b_node *root)
+{
+    int i;
+    for (i = 0; i < root->num_keys; i++)
+    {
+        if (!root->is_leaf)
+        {
+            traverse(root->children[i]);
+        }
+        printf("%d ", root->keys[i]);
+    }
+    if (!root->is_leaf)
+    {
+        traverse(root->children[i]);
+    }
+}
+
 int main()
 {
-    Arvore *arv = criar_arvore(3, 5);
-    inserir_chave(arv, 7);
-    inserir_chave(arv, 3);
-    inserir_chave(arv, 18);
-    inserir_chave(arv, 2);
-    inserir_chave(arv, 4);
-    inserir_chave(arv, 15);
-    inserir_chave(arv, 25);
-    inserir_chave(arv, 11);
-    inserir_chave(arv, 16);
-    inserir_chave(arv, 17);
-    inserir_chave(arv, 19);
-    inserir_chave(arv, 21);
-    imprimir_arvore(arv->raiz);
-    liberar_arvore(arv);
+    struct b_node *root = NULL;
+    insert(&root, 1);
+    insert(&root, 3);
+    insert(&root, 5);
+    insert(&root, 7);
+    insert(&root, 9);
+    insert(&root, 2);
+    insert(&root, 4);
+    insert(&root, 6);
+    insert(&root, 8);
+    insert(&root, 10);
+
+    traverse(root);
+
     return 0;
 }
