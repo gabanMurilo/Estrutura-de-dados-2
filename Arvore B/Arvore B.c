@@ -1,167 +1,166 @@
-#include <stdbool.h>
+
+// A árvore B tem a propriedade de manter um balanceamento entre altura e largura, permitindo que as operações de busca e inserção tenham um desempenho eficiente.
+// github.com\gabanMurilo
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
-#define MAX_KEYS 4
+#define GRAU_MIN 2
 
-struct b_node
+typedef struct node_t
 {
-    int num_keys;
-    int keys[MAX_KEYS];
-    struct b_node *children[MAX_KEYS + 1];
-    bool is_leaf;
-};
+    int n;                    // Número de chaves armazenadas no nó
+    int *keys;                // Array de chaves armazenadas no nó
+    struct node_t **filhos; // Array de ponteiros para os filhos do nó
+    bool folha;                // Indica se o nó é uma folha
+} node_t;
 
-struct b_node *create_node(bool is_leaf)
+// Função para criar um novo nó
+node_t *novo_noh(bool folha)
 {
-    struct b_node *new_node = (struct b_node *)malloc(sizeof(struct b_node));
-    new_node->num_keys = 0;
-    new_node->is_leaf = is_leaf;
-    for (int i = 0; i < MAX_KEYS; i++)
-    {
-        new_node->keys[i] = 0;
-        new_node->children[i] = NULL;
-    }
-    new_node->children[MAX_KEYS] = NULL;
-    return new_node;
+    node_t *node = (node_t *)malloc(sizeof(node_t));
+    node->n = 0;
+    node->keys = (int *)malloc((2 * GRAU_MIN - 1) * sizeof(int));
+    node->filhos = (node_t **)malloc(2 * GRAU_MIN * sizeof(node_t *));
+    node->folha = folha;
+    return node;
 }
 
-int binary_search(int *arr, int n, int key)
+// Função para buscar uma chave na árvore B
+node_t *busca(node_t *raiz, int key)
 {
-    int low = 0, high = n - 1, mid;
-    while (low <= high)
-    {
-        mid = (low + high) / 2;
-        if (key == arr[mid])
-        {
-            return mid;
-        }
-        else if (key < arr[mid])
-        {
-            high = mid - 1;
-        }
-        else
-        {
-            low = mid + 1;
-        }
-    }
-    return low;
+    int i = 0;
+    while (i < raiz->n && key > raiz->keys[i])
+        i++;
+    if (i < raiz->n && key == raiz->keys[i])
+        return raiz;
+    if (raiz->folha)
+        return NULL;
+    return busca(raiz->filhos[i], key);
 }
 
-void split_child(struct b_node *parent, int i, struct b_node *child)
+// Função para inserir uma chave na árvore B
+void insert(node_t **raiz, int key)
 {
-    struct b_node *new_child = create_node(child->is_leaf);
-    for (int j = 0; j < MAX_KEYS / 2; j++)
+    if (*raiz == NULL)
     {
-        new_child->keys[j] = child->keys[j + MAX_KEYS / 2];
-    }
-    if (!child->is_leaf)
-    {
-        for (int j = 0; j <= MAX_KEYS / 2; j++)
-        {
-            new_child->children[j] = child->children[j + MAX_KEYS / 2];
-        }
-    }
-    child->num_keys = MAX_KEYS / 2;
-    for (int j = parent->num_keys; j > i; j--)
-    {
-        parent->children[j + 1] = parent->children[j];
-        parent->keys[j] = parent->keys[j - 1];
-    }
-    parent->children[i + 1] = new_child;
-    parent->keys[i] = child->keys[MAX_KEYS / 2 - 1];
-    parent->num_keys++;
-}
-
-void insert_non_full(struct b_node *node, int key)
-{
-    int i = node->num_keys - 1;
-    if (node->is_leaf)
-    {
-        while (i >= 0 && node->keys[i] > key)
-        {
-            node->keys[i + 1] = node->keys[i];
-            i--;
-        }
-        node->keys[i + 1] = key;
-        node->num_keys++;
+        *raiz = novo_noh(true);
+        (*raiz)->keys[0] = key;
+        (*raiz)->n = 1;
     }
     else
     {
-        while (i >= 0 && node->keys[i] > key)
+        if ((*raiz)->n == 2 * GRAU_MIN - 1)
         {
+            node_t *s = novo_noh(false);
+            s->filhos[0] = *raiz;
+            *raiz = s;
+            dividir_filho(raiz, 0, (*raiz)->filhos[0]);
+            inserir_Ncheio(&(*raiz), key);
+        }
+        else
+        {
+            inserir_Ncheio(&(*raiz), key);
+        }
+    }
+}
+
+// Função auxiliar para inserir uma chave em um nó que não está cheio
+void inserir_Ncheio(node_t **node, int key)
+{
+    int i = (*node)->n - 1;
+    if ((*node)->folha)
+    {
+        while (i >= 0 && key < (*node)->keys[i])
+        {
+            (*node)->keys[i + 1] = (*node)->keys[i];
             i--;
         }
-        if (node->children[i + 1]->num_keys == MAX_KEYS)
+        (*node)->keys[i + 1] = key;
+        (*node)->n++;
+    }
+    else
+    {
+        while (i >= 0 && key < (*node)->keys[i])
+            i--;
+        i++;
+        if ((*node)->filhos[i]->n == 2 * GRAU_MIN - 1)
         {
-            split_child(node, i + 1, node->children[i + 1]);
-            if (node->keys[i + 1] < key)
-            {
+            dividir_filho(node, i, (*node)->filhos[i]);
+            if (key > (*node)->keys[i])
                 i++;
-            }
         }
-        insert_non_full(node->children[i + 1], key);
+        inserir_Ncheio(&(*node)->filhos[i], key);
     }
 }
 
-void insert(struct b_node **root, int key)
+// Função auxiliar para dividir um nó filho em dois
+void dividir_filho(node_t **node, int i, node_t *child)
 {
-    if (*root == NULL)
+    node_t *z = novo_noh(child->folha);
+    z->n = GRAU_MIN - 1;
+    for (int j = 0; j < GRAU_MIN - 1; j++)
+        z->keys[j] = child->keys[j + GRAU_MIN];
+    // Copia os últimos GRAU_MIN filhos de child para o novo nó z, se child não for folha
+    if (!child->folha)
     {
-        *root = create_node(true);
-        (*root)->keys[0] = key;
-        (*root)->num_keys++;
+        for (int j = 0; j < GRAU_MIN; j++)
+            z->filhos[j] = child->filhos[j + GRAU_MIN];
     }
-    else
-    {
-        if ((*root)->num_keys == MAX_KEYS)
-        {
-            struct b_node *new_root = create_node(false);
-            new_root->children[0] = *root;
-            split_child(new_root, 0, *root);
-            int i = binary_search(new_root->keys, new_root->num_keys, key);
-            insert_non_full(new_root->children[i + 1], key);
-            *root = new_root;
-        }
-        else
-        {
-            insert_non_full(*root, key);
-        }
-    }
+
+    // Atualiza o número de chaves em child
+    child->n = GRAU_MIN - 1;
+
+    // Desloca os filhos de node para a direita para abrir espaço para o novo filho z
+    for (int j = (*node)->n; j >= i + 1; j--)
+        (*node)->filhos[j + 1] = (*node)->filhos[j];
+
+    // Insere o novo filho z no índice i+1 de node
+    (*node)->filhos[i + 1] = z;
+
+    // Desloca as chaves de node para a direita para abrir espaço para a nova chave
+    for (int j = (*node)->n - 1; j >= i; j--)
+        (*node)->keys[j + 1] = (*node)->keys[j];
+
+    // Insere a nova chave em node
+    (*node)->keys[i] = child->keys[GRAU_MIN - 1];
+    (*node)->n++;
 }
 
-void traverse(struct b_node *root)
+// Função para imprimir a árvore B em ordem
+void imprimirOrdenado(node_t *raiz)
 {
-    int i;
-    for (i = 0; i < root->num_keys; i++)
+    if (raiz != NULL)
     {
-        if (!root->is_leaf)
+        int i;
+        for (i = 0; i < raiz->n; i++)
         {
-            traverse(root->children[i]);
+            if (!raiz->folha)
+                imprimirOrdenado(raiz->filhos[i]);
+            printf("%d ", raiz->keys[i]);
         }
-        printf("%d ", root->keys[i]);
-    }
-    if (!root->is_leaf)
-    {
-        traverse(root->children[i]);
+        if (!raiz->folha)
+            imprimirOrdenado(raiz->filhos[i]);
     }
 }
 
 int main()
 {
-    struct b_node *root = NULL;
-    insert(&root, 1);
-    insert(&root, 3);
-    insert(&root, 5);
-    insert(&root, 7);
-    insert(&root, 9);
-    insert(&root, 2);
-    insert(&root, 4);
-    insert(&root, 6);
-    insert(&root, 8);
-    insert(&root, 10);
+    node_t *raiz = NULL;
+    insert(&raiz, 10);
+    insert(&raiz, 20);
+    insert(&raiz, -5);
+    insert(&raiz, 6);
+    insert(&raiz, 12);
+    insert(&raiz, -30);
+    insert(&raiz, 7);
+    insert(&raiz, 0);
+    insert(&raiz, 17);
+    insert(&raiz, 166);
+    insert(&raiz, 19);
 
-    traverse(root);
+    imprimirOrdenado(raiz);
 
     return 0;
 }
