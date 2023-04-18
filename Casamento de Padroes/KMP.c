@@ -15,7 +15,7 @@ void buscaKMP(char *padrao, char *texto, int *tabela)// função que que recebe 
             j++;
         }
         if (i == m) {
-            printf("Padrao encontrado na posicao %d do texto.", j - i+1);
+            printf("Padrao encontrado na posicao %d do texto. \n", j - i+1);
             i = tabela[i - 1];
         } else if (j < n && padrao[i] != texto[j]) {
             if (i != 0)
