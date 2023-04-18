@@ -1,52 +1,67 @@
 #include <stdio.h>
+#include <stdlib.h>
 
-int main() {
-    int numeros[1000]; // assumindo que o arquivo terá no máximo 1000 inteiros
-    int i, j, temp, n;
-
-    // abrindo o arquivo de entrada para leitura
-    FILE *entrada = fopen("numeros.txt", "r");
-    if (entrada == NULL) {
-        printf("Erro ao abrir o arquivo de entrada.\n");
-        return 1;
-    }
-
-    // lendo os inteiros do arquivo
-    n = 0;
-    while (fscanf(entrada, "%d", &numeros[n]) != EOF) {
-        n++;
-    }
-
-    // fechando o arquivo de entrada
-    fclose(entrada);
-
-    // ordenando os inteiros (bubble sort)
+void bubbleSort(int arr[], int n) {
+    int i, j;
     for (i = 0; i < n-1; i++) {
         for (j = 0; j < n-i-1; j++) {
-            if (numeros[j] > numeros[j+1]) {
-                temp = numeros[j];
-                numeros[j] = numeros[j+1];
-                numeros[j+1] = temp;
+            if (arr[j] > arr[j+1]) {
+                int temp = arr[j];
+                arr[j] = arr[j+1];
+                arr[j+1] = temp;
             }
         }
     }
+}
 
-    // abrindo o arquivo de saída para escrita (apaga o conteúdo anterior)
-    FILE *saida = fopen("numeros.txt", "w");
-    if (saida == NULL) {
-        printf("Erro ao abrir o arquivo de saída.\n");
+int main() {
+    FILE *fp;
+    int n, i;
+
+    // Abrir o arquivo em modo de gravacao
+    fp = fopen("numeros", "w");
+    if (fp == NULL) {
+        printf("Erro ao abrir o arquivo\n");
         return 1;
     }
 
-    // escrevendo os inteiros ordenados no arquivo de saída
+    // Obter o número de elementos no arquivo
+    fscanf(fp, "%d", &n);
+
+    // Ler os elementos do arquivo e armazená-los em um array
+    int *arr = (int*) malloc(n * sizeof(int));
     for (i = 0; i < n; i++) {
-        fprintf(saida, "%d\n", numeros[i]);
+        fscanf(fp, "%d", &arr[i]);
     }
 
-    // fechando o arquivo de saída
-    fclose(saida);
+    // Fechar o arquivo
+    fclose(fp);
 
-    printf("Arquivo ordenado com sucesso!\n");
+    // Ordenar o array
+    bubbleSort(arr, n);
+
+    // Abrir o arquivo em modo de gravação
+    fp = fopen("numeros", "w");
+    if (fp == NULL) {
+        printf("Erro ao abrir o arquivo\n");
+        return 1;
+    }
+
+    // Gravar o número de elementos no arquivo
+    fprintf(fp, "%d\n", n);
+
+    // Gravar os elementos ordenados no arquivo
+    for (i = 0; i < n; i++) {
+        fprintf(fp, "%d ", arr[i]);
+    }
+
+    // Fechar o arquivo
+    fclose(fp);
+
+    // Liberar a memória alocada para o array
+    free(arr);
+
+    printf("Arquivo ordenado e atualizado com sucesso!\n");
 
     return 0;
 }
