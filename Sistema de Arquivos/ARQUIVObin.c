@@ -1,53 +1,78 @@
 #include <stdio.h>
+#include <stdlib.h>
 
-int main() {
-    int numeros[1000]; // assumindo que o arquivo terá no máximo 1000 inteiros
-    int i, j, temp, n;
-    size_t tam = sizeof(int); // tamanho do tipo de dado armazenado
+void quickSort(int arr[], int left, int right) {
+    int i = left, j = right;
+    int pivot = arr[(left + right) / 2];
 
-    // abrindo o arquivo de entrada para leitura em modo binário
-    FILE *entrada = fopen("numeros.bin", "rb");
-    if (entrada == NULL) {
-        printf("Erro ao abrir o arquivo de entrada.\n");
-        return 1;
-    }
-
-    // lendo os inteiros do arquivo
-    n = 0;
-    while (fread(&numeros[n], tam, 1, entrada) == 1) {
-        n++;
-    }
-
-    // fechando o arquivo de entrada
-    fclose(entrada);
-
-    // ordenando os inteiros (bubble sort)
-    for (i = 0; i < n-1; i++) {
-        for (j = 0; j < n-i-1; j++) {
-            if (numeros[j] > numeros[j+1]) {
-                temp = numeros[j];
-                numeros[j] = numeros[j+1];
-                numeros[j+1] = temp;
-            }
+    while (i <= j) {
+        while (arr[i] < pivot) {
+            i++;
+        }
+        while (arr[j] > pivot) {
+            j--;
+        }
+        if (i <= j) {
+            int temp = arr[i];
+            arr[i] = arr[j];
+            arr[j] = temp;
+            i++;
+            j--;
         }
     }
 
-    // abrindo o arquivo de saída para escrita em modo binário (apaga o conteúdo anterior)
-    FILE *saida = fopen("numeros.bin", "wb");
-    if (saida == NULL) {
-        printf("Erro ao abrir o arquivo de saída.\n");
+    if (left < j) {
+        quickSort(arr, left, j);
+    }
+    if (i < right) {
+        quickSort(arr, i, right);
+    }
+}
+
+int main() {
+    FILE *fp;
+    int n, i;
+
+    // Abrir o arquivo em modo de escrita binária
+    fp = fopen("numeros.bin", "wb");
+    if (fp == NULL) {
+        printf("Erro ao abrir o arquivo\n");
         return 1;
     }
 
-    // escrevendo os inteiros ordenados no arquivo de saída
-    for (i = 0; i < n; i++) {
-        fwrite(&numeros[i], tam, 1, saida);
+    // Obter o número de elementos no arquivo
+    fread(&n, sizeof(int), 1, fp);
+
+    // Ler os elementos do arquivo e armazená-los em um array
+    int *arr = (int*) malloc(n * sizeof(int));
+    fread(arr, sizeof(int), n, fp);
+
+    // Fechar o arquivo
+    fclose(fp);
+
+    // Ordenar o array
+    quickSort(arr, 0, n-1);
+
+    // Abrir o arquivo em modo de gravação binária
+    fp = fopen("numeros.bin", "wb");
+    if (fp == NULL) {
+        printf("Erro ao abrir o arquivo\n");
+        return 1;
     }
 
-    // fechando o arquivo de saída
-    fclose(saida);
+    // Gravar o número de elementos no arquivo
+    fwrite(&n, sizeof(int), 1, fp);
 
-    printf("Arquivo ordenado com sucesso!\n");
+    // Gravar os elementos ordenados no arquivo
+    fwrite(arr, sizeof(int), n, fp);
+
+    // Fechar o arquivo
+    fclose(fp);
+
+    // Liberar a memória alocada para o array
+    free(arr);
+
+    printf("Arquivo ordenado e atualizado com sucesso!\n");
 
     return 0;
 }
